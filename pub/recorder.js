@@ -28,6 +28,13 @@ addEventListener("DOMContentLoaded", () => {
     return element
   }
 
+  let update_video = async () => {
+    let element = document.getElementById("video")
+    if (element && stream) {
+      element.srcObject = stream
+    }
+  }
+
   let update_stream = async () => {
     stream = undefined
 
@@ -46,7 +53,7 @@ addEventListener("DOMContentLoaded", () => {
     })
 
     stream = await navigator.mediaDevices.getUserMedia(constraints)
-    document.getElementById("video").srcObject = stream
+    update_video()
   }
 
   (async () => {
@@ -98,10 +105,9 @@ addEventListener("DOMContentLoaded", () => {
       element.onchange = () => {
         update_stream().catch(e => log(e))
       }
-
       document.getElementById(key + "-selector").appendChild(element)
 
-      document.getElementById("video").srcObject = stream
+      update_video()
     })
   })().catch(e => log(e))
 })
