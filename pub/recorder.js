@@ -105,7 +105,7 @@ addEventListener("DOMContentLoaded", () => {
     })
     let finished = new Date()
 
-    log(path, response.status, response.statusText, finished.getTime() - started.getTime())
+    // log(path, response.status, response.statusText, finished.getTime() - started.getTime())
   }
 
   let start = async () => {
@@ -120,7 +120,7 @@ addEventListener("DOMContentLoaded", () => {
     recorder = new MediaRecorder(stream)
     recorder.ondataavailable = ev => {
       let data = ev.data
-      log("data", data.type, data.size)
+      // log("data", data.type, data.size)
       upload(data).catch(e => log(e))
     }
     recorder.start(1000)
