@@ -1,4 +1,4 @@
-onload = () => {
+addEventListener("DOMContentLoaded", () => {
   let stream
   let video_track
   let audio_track
@@ -28,66 +28,80 @@ onload = () => {
     return element
   }
 
+  let update_stream = async () => {
+    stream = undefined
+
+    let constraints = { video: true, audio: true }
+    document.getElementsByName("video-selector").forEach(element => {
+      log(element.id, element.value, element.checked)
+      if (element.checked) {
+        constraints.video = { deviceId: element.value }
+      }
+    })
+    document.getElementsByName("audio-selector").forEach(element => {
+      log(element.id, element.value, element.checked)
+      if (element.checked) {
+        constraints.audio = { deviceId: element.value }
+      }
+    })
+
+    stream = await navigator.mediaDevices.getUserMedia(constraints)
+    document.getElementById("video").srcObject = stream
+  }
+
   (async () => {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     devices = await navigator.mediaDevices.enumerateDevices()
 
     stream.getVideoTracks().forEach((track, i) => {
-      if (i == 0) {
+      if (i === 0) {
         video_track = track
       }
       log("video track", track.kind, track.id, track.label, track.getSettings().deviceId)
     })
     stream.getAudioTracks().forEach((track, i) => {
-      if (i == 0) {
+      if (i === 0) {
         audio_track = track
       }
       log("audio track", track.kind, track.id, track.label, track.getSettings().deviceId)
     })
 
-    devices.forEach((device) => {
+    devices.forEach(device => {
       log("device", device.kind, device.deviceId, device.label)
 
-      let selector_name
-      let selector
-      let checked
+      let key
+      let track
+
       if (device.kind === "videoinput") {
-        selector_name = "video-selector"
-        selector = document.getElementById("video-selector")
-        checked = device.deviceId === video_track.getSettings().deviceId
-      } else if (device.kind == "audioinput") {
-        selector_name = "audio-selector"
-        selector = document.getElementById("audio-selector")
-        checked = device.deviceId === audio_track.getSettings().deviceId
+        key = "video"
+        track = video_track
+      } else if (device.kind === "audioinput") {
+        key = "audio"
+        track = audio_track
       } else {
         return
       }
 
-      let id = device.kind + "-" + device.deviceId
-
-      selector.appendChild(create_element("div", {}, [
+      let element = create_element("div", {}, [
         create_element("input", {
           type: "radio",
-          id: id,
-          name: selector_name,
+          id: key + "-" + device.deviceId,
+          name: key + "-selector",
           value: device.deviceId,
-          checked: checked,
+          checked: device.deviceId === track.getSettings().deviceId,
         }),
         " ",
-        create_element("label", { "for": id, }, [ device.label ]),
-      ]))
+        create_element("label", {
+          "for": key + "-" + device.deviceId,
+        }, [ device.label ]),
+      ])
+      element.onchange = () => {
+        update_stream().catch(e => log(e))
+      }
+
+      document.getElementById(key + "-selector").appendChild(element)
+
+      document.getElementById("video").srcObject = stream
     })
-
-    // document.getElementById("audio-selector").appendChild(
-    //   create_element("div", {}, [
-    //     "test1",
-    //     create_element("input", { type: "text", value: "あああ" }),
-    //     "test2",
-    //   ]))
-
-    // create_element("input", { type: "text", "data-test": 42 }, [])
-
-  })().catch((e) => {
-    log(e)
-  })
-}
+  })().catch(e => log(e))
+})
