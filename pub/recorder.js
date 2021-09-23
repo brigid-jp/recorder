@@ -1,8 +1,6 @@
 addEventListener("DOMContentLoaded", () => {
   let stream
-  let video_track
-  let audio_track
-  let devices
+  let recorder
 
   let log = (...args) => {
     console.log(args)
@@ -30,25 +28,28 @@ addEventListener("DOMContentLoaded", () => {
 
   let update_video = async () => {
     let element = document.getElementById("video")
-    if (element && stream) {
+    if (element) {
       element.srcObject = stream
     }
   }
 
   let update_stream = async () => {
+    stream.getTracks().forEach(track => {
+      track.stop()
+    })
     stream = undefined
 
     let constraints = { video: true, audio: true }
     document.getElementsByName("video-selector").forEach(element => {
       log(element.id, element.value, element.checked)
       if (element.checked) {
-        constraints.video = { deviceId: element.value }
+        constraints.video = { deviceId: { exact: element.value } }
       }
     })
     document.getElementsByName("audio-selector").forEach(element => {
       log(element.id, element.value, element.checked)
       if (element.checked) {
-        constraints.audio = { deviceId: element.value }
+        constraints.audio = { deviceId: { exact: element.value } }
       }
     })
 
@@ -56,19 +57,35 @@ addEventListener("DOMContentLoaded", () => {
     update_video()
   }
 
+  let start = async () => {
+    log("start")
+    recorder = new MediaRecorder(stream)
+    recorder.ondataavailable = ev => {
+      let data = ev.data
+      log("data", data.type, data.size)
+    }
+    recorder.start(1000)
+  }
+
+  let stop = async () => {
+    log("stop")
+    recorder.stop()
+  }
+
   (async () => {
     stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-    devices = await navigator.mediaDevices.enumerateDevices()
+    let devices = await navigator.mediaDevices.enumerateDevices()
+    let tracks = {}
 
     stream.getVideoTracks().forEach((track, i) => {
       if (i === 0) {
-        video_track = track
+        tracks.video = track
       }
       log("video track", track.kind, track.id, track.label, track.getSettings().deviceId)
     })
     stream.getAudioTracks().forEach((track, i) => {
       if (i === 0) {
-        audio_track = track
+        tracks.audio = track
       }
       log("audio track", track.kind, track.id, track.label, track.getSettings().deviceId)
     })
@@ -77,14 +94,10 @@ addEventListener("DOMContentLoaded", () => {
       log("device", device.kind, device.deviceId, device.label)
 
       let key
-      let track
-
       if (device.kind === "videoinput") {
         key = "video"
-        track = video_track
       } else if (device.kind === "audioinput") {
         key = "audio"
-        track = audio_track
       } else {
         return
       }
@@ -95,7 +108,7 @@ addEventListener("DOMContentLoaded", () => {
           id: key + "-" + device.deviceId,
           name: key + "-selector",
           value: device.deviceId,
-          checked: device.deviceId === track.getSettings().deviceId,
+          checked: device.deviceId === tracks[key].getSettings().deviceId,
         }),
         " ",
         create_element("label", {
@@ -108,6 +121,14 @@ addEventListener("DOMContentLoaded", () => {
       document.getElementById(key + "-selector").appendChild(element)
 
       update_video()
+
+      document.getElementById("start").onclick = () => {
+        start().catch(e => log(e))
+      }
+
+      document.getElementById("stop").onclick = () => {
+        stop().catch(e => log(e))
+      }
     })
   })().catch(e => log(e))
 })
