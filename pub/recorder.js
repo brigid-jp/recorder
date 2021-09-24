@@ -23,7 +23,7 @@ addEventListener("DOMContentLoaded", () => {
   let format_date = date => {
     return date.getFullYear() +
       format(2, date.getMonth() + 1) +
-      format(2, date.getDay()) + "_" +
+      format(2, date.getDate()) + "_" +
       format(2, date.getHours()) +
       format(2, date.getMinutes()) +
       format(2, date.getSeconds()) + "_" +
