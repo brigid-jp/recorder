@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded", () => {
 
   let format_date = date => {
     return date.getFullYear() +
-      format(2, date.getMonth()) +
+      format(2, date.getMonth() + 1) +
       format(2, date.getDay()) + "_" +
       format(2, date.getHours()) +
       format(2, date.getMinutes()) +
@@ -80,7 +80,16 @@ addEventListener("DOMContentLoaded", () => {
     update_video()
   }
 
-  let upload = async data => {
+  let update_session = () => {
+    session = format_date(new Date()) + "-" + format(6, Math.floor(Math.random() * 999999))
+    session_counter = 0
+
+    let username = document.getElementById("username").value
+    let password = document.getElementById("password").value
+    authorization = "Basic " + btoa(username + ":" + password)
+  }
+
+  let upload = async (data, flag) => {
     let suffix
     if (data.type.search(/video\/mp4/) !== -1) {
       suffix = ".mp4"
@@ -105,16 +114,20 @@ addEventListener("DOMContentLoaded", () => {
     })
     let finished = new Date()
 
-    // log(path, response.status, response.statusText, finished.getTime() - started.getTime())
+    if (flag) {
+      log(path, response.status, response.statusText, finished.getTime() - started.getTime())
+    }
+  }
+
+  let test = async () => {
+    update_session()
+
+    var data = new Blob([ format_date(new Date()), "\n" ])
+    upload(data, true).catch(e => log(e))
   }
 
   let start = async () => {
-    session = format_date(new Date()) + "-" + format(6, Math.floor(Math.random() * 999999))
-    session_counter = 0
-
-    let username = document.getElementById("username").value
-    let password = document.getElementById("password").value
-    authorization = "Basic " + btoa(username + ":" + password)
+    update_session()
 
     log("start")
     recorder = new MediaRecorder(stream)
@@ -180,6 +193,10 @@ addEventListener("DOMContentLoaded", () => {
       document.getElementById(key + "-selector").appendChild(element)
 
       update_video()
+
+      document.getElementById("test").onclick = () => {
+        test().catch(e => log(e))
+      }
 
       document.getElementById("start").onclick = () => {
         start().catch(e => log(e))
