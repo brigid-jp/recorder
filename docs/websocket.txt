@@ -13,4 +13,3 @@ X-Forwarded-Server: nozomi.dromozoa.com
 Upgrade: WebSocket
 Connection: Upgrade
 
-
