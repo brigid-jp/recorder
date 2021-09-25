@@ -8,7 +8,7 @@ addEventListener("DOMContentLoaded", () => {
   document.getElementById("start").onclick = () => {
     log("start")
 
-    socket = new WebSocket("wss://nozomi.dromozoa.com/recorder/socket")
+    socket = new WebSocket("wss://nozomi.dromozoa.com/recorder-socket")
 
     socket.onopen = () => {
       log("open")
