@@ -1,8 +1,6 @@
 #! /usr/bin/env lua
 
-local mime = require "mime"
 local socket = require "socket"
-local brigid = require "brigid"
 local websocket = require "websocket"
 
 local host, serv = ...
@@ -11,6 +9,7 @@ local server = assert(socket.bind(host, serv))
 assert(server:settimeout(0))
 
 local websockets = {}
+local seq_no = 0
 
 while true do
   local recv = { server }
@@ -22,6 +21,18 @@ while true do
   end
 
   local recv, send, message = assert(socket.select(recv, send, timeout))
+
+  seq_no = seq_no + 1
+  if seq_no % 10 == 0 then
+    for s, ws in pairs(websockets) do
+      ws:send_ping "test"
+    end
+  end
+  if seq_no % 10 == 5 then
+    for s, ws in pairs(websockets) do
+      ws:send_text "あいうえおかきくけこさしすせそ"
+    end
+  end
 
   for i = 1, #recv do
     local s = recv[i]

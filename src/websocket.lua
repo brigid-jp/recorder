@@ -61,11 +61,29 @@ function class:send(opcode, payload)
     data[3] = string.char(c, d, e, f, g, h)
   end
 
-  data[4] = payload
+  data[#data + 1] = payload
+
+  self.socket:send(table.concat(data))
+end
+
+function class:send_text(payload)
+  self:send(0x1, payload)
+end
+
+function class:send_binary(payload)
+  self:send(0x2, payload)
 end
 
 function class:send_close(payload)
   self:send(0x8, payload)
+end
+
+function class:send_ping(payload)
+  self:send(0x9, payload)
+end
+
+function class:send_pong(payload)
+  self:send(0xA, payload)
 end
 
 function class:read(data)
@@ -186,9 +204,11 @@ function class:read(data)
         self:send_close()
         return self:close()
       elseif self.opcode == 0x9 then
-        -- ping
+        self:send_pong(self.payload)
       elseif self.opcode == 0xA then
-        -- pong
+        if self.on_pong then
+          self:on_pong()
+        end
       else
         if self.on_message then
           self:on_message()
