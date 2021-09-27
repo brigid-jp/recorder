@@ -9,7 +9,7 @@ local service = require "service"
 local websocket = require "websocket"
 
 local select_timer = 1
-local ping_timer = 1
+local ping_timer = 30
 
 local host, serv = ...
 

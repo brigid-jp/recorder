@@ -13,13 +13,6 @@ addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("key").textContent = key
 
-  let update_video = async () => {
-    let element = document.getElementById("video")
-    if (element) {
-      element.srcObject = stream
-    }
-  }
-
   let update_stream = async () => {
     stream.getTracks().forEach(track => {
       track.stop()
@@ -41,12 +34,6 @@ addEventListener("DOMContentLoaded", () => {
     })
 
     stream = await navigator.mediaDevices.getUserMedia(constraints)
-    update_video()
-  }
-
-  let update_session = () => {
-    session = format_date(new Date()) + "-" + format(6, Math.floor(Math.random() * 999999))
-    session_counter = 0
   }
 
   let upload = async (data, flag) => {
@@ -83,7 +70,8 @@ addEventListener("DOMContentLoaded", () => {
     }
 
     log("start")
-    update_session()
+    session = format_date(new Date()) + "-" + format(6, Math.floor(Math.random() * 999999))
+    session_counter = 0
     recorder = new MediaRecorder(stream)
     recorder.ondataavailable = ev => {
       let data = ev.data
@@ -123,7 +111,16 @@ addEventListener("DOMContentLoaded", () => {
       } else if (data.command === "capture") {
         let track = stream.getVideoTracks()[0]
         let capture = new ImageCapture(track)
-        let photo = await capture.takePhoto()
+
+        let caps = await capture.getPhotoCapabilities()
+        log("caps max", caps.imageWidth.max, caps.imageHeight.max)
+        log("caps min", caps.imageWidth.min, caps.imageHeight.min)
+        log("caps step", caps.imageWidth.step, caps.imageHeight.step)
+
+        let photo = await capture.takePhoto({
+          imageWidth: caps.imageWidth.min,
+          imageHeight: caps.imageHeight.min,
+        })
         socket.send(photo)
       } else if (data.command === "start") {
         let result = start()
@@ -184,8 +181,6 @@ addEventListener("DOMContentLoaded", () => {
         update_stream().catch(e => log(e))
       }
       document.getElementById(key + "-selector").appendChild(element)
-
-      update_video()
     })
 
     document.getElementById("open").onclick = () => {
