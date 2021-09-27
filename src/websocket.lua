@@ -1,14 +1,12 @@
+-- Copyright (c) 2021 <dev@brigid.jp>
+-- This software is released under the MIT License.
+-- https://opensource.org/licenses/mit-license.php
+
 local brigid = require "brigid"
 local mime = require "mime"
 
 local class = {}
 local metatable = { __index = class }
-
-local RESPONSE_426 = ([[
-HTTP/1.1 426 Upgrade Required
-Sec-WebSocket-Version: %d
-
-]]):gsub("\n", "\r\n")
 
 local RESPONSE_101 = ([[
 HTTP/1.1 101 Switching Protocols
@@ -18,27 +16,30 @@ Sec-WebSocket-Accept: %s
 
 ]]):gsub("\n", "\r\n")
 
-local function new(sockets, socket)
+local RESPONSE_404 = ([[
+HTTP/1.1 404 Not Found
+
+]]):gsub("\n", "\r\n")
+
+
+local RESPONSE_426 = ([[
+HTTP/1.1 426 Upgrade Required
+Sec-WebSocket-Version: %d
+
+]]):gsub("\n", "\r\n")
+
+local function new(service, socket)
   local self = setmetatable({
-    sockets = sockets;
+    service = service;
     socket = socket;
     buffer = "";
     state = 1
   }, metatable)
-  sockets[socket] = self
+  service:add_socket(socket, self)
   return self
 end
 
-function class:close()
-  local host, serv, family = assert(self.socket:getpeername())
-  self.socket:close()
-  self.sockets[self.socket] = nil
-  if self.on_close then
-    self:on_close(host, serv, family)
-  end
-end
-
-function class:send(opcode, payload)
+local function send(self, opcode, payload)
   if not payload then
     payload = ""
   end
@@ -70,16 +71,25 @@ function class:send(opcode, payload)
   self.socket:send(table.concat(data))
 end
 
+function class:close()
+  local host, serv, family = assert(self.socket:getpeername())
+  self.socket:close()
+  self.service:remove_socket(self.socket)
+  if self.on_close then
+    self:on_close(host, serv, family)
+  end
+end
+
 function class:send_text(payload)
-  self:send(0x1, payload)
+  send(self, 0x1, payload)
 end
 
 function class:send_binary(payload)
-  self:send(0x2, payload)
+  send(self, 0x2, payload)
 end
 
 function class:send_ping(payload)
-  self:send(0x9, payload)
+  send(self, 0x9, payload)
 end
 
 function class:read(data)
@@ -120,15 +130,22 @@ function class:read(data)
         self.socket:send(RESPONSE_426:format(13))
         return self:close()
       else
+        local opened = true
+        if self.on_open then
+          opened = self:on_open(assert(self.socket:getpeername()))
+        end
+
+        if opened == false then
+          self.socket:send(RESPONSE_404)
+          return self:close()
+        end
+
         self.socket:send(RESPONSE_101:format(mime.b64(
           brigid.hasher "sha1"
             :update(headers["Sec-WebSocket-Key"])
             :update "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
             :digest()
         )))
-        if self.on_open then
-          self:on_open(assert(self.socket:getpeername()))
-        end
       end
 
       self.buffer = buffer_next
@@ -208,10 +225,10 @@ function class:read(data)
           self:on_binary()
         end
       elseif self.opcode == 0x8 then
-        self:send(0x8)
+        send(self, 0x8)
         return self:close()
       elseif self.opcode == 0x9 then
-        self:send(0xA, self.payload)
+        send(self, 0xA, self.payload)
       elseif self.opcode == 0xA then
         if self.on_pong then
           self:on_pong()
@@ -225,7 +242,7 @@ function class:read(data)
 end
 
 return setmetatable(class, {
-  __call = function (_, sockets, socket)
-    return setmetatable(new(sockets, socket), metatable)
+  __call = function (_, service, socket)
+    return setmetatable(new(service, socket), metatable)
   end;
 })

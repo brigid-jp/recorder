@@ -8,7 +8,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>websocket</title>
+<title>control</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/4.0.0/github-markdown.min.css">
 <style>
 .markdown-body {
@@ -28,27 +28,44 @@
 <body>
 <div class="markdown-body">
 
-<h1>websocket</h1>
+<h1>control</h1>
 
-<div>
-  <button id="start">start</button>
-</div>
+<table>
+  <tr>
+    <td>key</td>
+    <td>
+      <div id="key"></div>
+    </td>
+  </tr>
+  <tr>
+    <td>image</td>
+    <td>
+      <img id="image">
+    </td>
+  </tr>
+  <tr>
+    <td>socket</td>
+    <td>
+      <button id="open">open</button>
+      <button id="close">close</button>
+    </td>
+  </tr>
+  <tr>
+    <td>control</td>
+    <td>
+      <button id="status">status</button>
+      <button id="capture">capture</button>
+      <button id="start">start</button>
+      <button id="stop">stop</button>
+    </td>
+  </tr>
+</table>
 
-<div>
-  <button id="stop">stop</button>
-</div>
-
-<div>
-  <input type="text" id="text">
-  <button id="send-text">send-text</button>
-</div>
-
-<div>
-  <input type="text" id="binary">
-  <button id="send-binary">send-binary</button>
-</div>
+<pre id="log"></pre>
 
 </div>
-<script src="websocket.js"></script>
+<script src="common.js"></script>
+<script src="control.js"></script>
 </body>
 </html>
+

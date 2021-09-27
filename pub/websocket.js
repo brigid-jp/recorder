@@ -1,3 +1,7 @@
+// Copyright (c) 2021 <dev@brigid.jp>
+// This software is released under the MIT License.
+// https://opensource.org/licenses/mit-license.php
+
 addEventListener("DOMContentLoaded", () => {
   let socket
 
@@ -9,6 +13,7 @@ addEventListener("DOMContentLoaded", () => {
     log("start")
 
     socket = new WebSocket("wss://nozomi.dromozoa.com/recorder-socket")
+    socket.binaryType = "blob"
 
     socket.onopen = () => {
       log("open")
@@ -34,11 +39,15 @@ addEventListener("DOMContentLoaded", () => {
     socket = undefined
   }
 
-  document.getElementById("send").onclick = () => {
-    let data = document.getElementById("data").value
-    log("send", data)
-
+  document.getElementById("send-text").onclick = () => {
+    let data = document.getElementById("text").value
+    log("send-text", data)
     socket.send(data)
   }
 
+  document.getElementById("send-binary").onclick = () => {
+    let data = new Blob([ document.getElementById("binary").value ])
+    log("send-binary", data)
+    socket.send(data)
+  }
 })

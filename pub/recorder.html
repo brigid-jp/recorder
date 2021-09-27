@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!--
+  Copyright (c) 2021 <dev@brigid.jp>
+  This software is released under the MIT License.
+  https://opensource.org/licenses/mit-license.php
+-->
 <html>
 <head>
 <meta charset="UTF-8">
@@ -27,6 +32,12 @@
 
 <table>
   <tr>
+    <td>key</td>
+    <td>
+      <div id="key"></div>
+    </td>
+  </tr>
+  <tr>
     <td>video</td>
     <td>
       <div id="video-selector"></div>
@@ -42,6 +53,13 @@
     </td>
   </tr>
   <tr>
+    <td>socket</td>
+    <td>
+      <button id="open">open</button>
+      <button id="close">close</button>
+    </td>
+  </tr>
+  <tr>
     <td colspan="2">
       <button id="test">test</button>
       <button id="start">start</button>
@@ -53,6 +71,7 @@
 <pre id="log"></pre>
 
 </div>
+<script src="common.js"></script>
 <script src="recorder.js"></script>
 </body>
 </html>
