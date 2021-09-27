@@ -187,7 +187,14 @@ addEventListener("DOMContentLoaded", () => {
       }
 
       socket.onmessage = (ev) => {
-        log("onmessage", ev.data)
+        log("onmessage", typeof ev.data)
+        if (typeof ev.data === "string") {
+          log("ontext", ev.data)
+          let data = JSON.parse(ev.data)
+          log("onjson", data)
+        } else {
+          log("onbinary", ev.data.size)
+        }
       }
     }
 
