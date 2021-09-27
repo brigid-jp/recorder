@@ -193,12 +193,12 @@ function class:read(data)
       self.payload = table.concat(payload)
 
       if self.opcode == 0x01 then
-        if self.on_text then
-          self:on_text()
+        if self.receive_text then
+          self:receive_text()
         end
       elseif self.opcode == 0x02 then
-        if self.on_binary then
-          self:on_binary()
+        if self.receive_binary then
+          self:receive_binary()
         end
       elseif self.opcode == 0x8 then
         self:send(0x8)
@@ -206,8 +206,8 @@ function class:read(data)
       elseif self.opcode == 0x9 then
         self:send(0xA, self.payload)
       elseif self.opcode == 0xA then
-        if self.on_pong then
-          self:on_pong()
+        if self.receive_pong then
+          self:receive_pong()
         end
       end
 
