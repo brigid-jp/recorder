@@ -19,7 +19,7 @@ local server = assert(socket.bind(host, serv))
 assert(server:settimeout(0))
 
 local function ping(ws)
-  ws:send_ping()
+  -- ws:send_ping()
   ws.ping_timer = service:add_timer(function () ping(ws) end, ping_timer)
 end
 
@@ -76,23 +76,28 @@ while true do
         end
       end
       function ws:on_text()
-        io.write(("on_text[opcode=0x%X][payload=%s]\n"):format(self.opcode, self.payload))
+        io.write(("on_text[fin=%s][opcode=0x%X][payload=%s]\n"):format(self.fin, self.opcode, self.payload))
         if self.mode == "recorder" then
           for _, ws in pairs(rooms[self.key].controls) do
-            ws:send_text(self.payload)
+            ws:send(self.fin, self.opcode, self.payload)
           end
         elseif self.mode == "control" then
-          rooms[self.key].recorder:send_text(self.payload)
+          local recorder = rooms[self.key].recorder
+          if recorder then
+            recorder:send(self.fin, self.opcode, self.payload)
+          end
         end
       end
       function ws:on_binary()
-        io.write(("on_binary[opcode=0x%X]\n"):format(self.opcode))
+        io.write(("on_binary[fin=%s][opcode=0x%X][size=%d]\n"):format(self.fin, self.opcode, #self.payload))
         if self.mode == "recorder" then
           for _, ws in pairs(rooms[self.key].controls) do
-            ws:send_binary(self.payload)
+            ws:send(self.fin, self.opcode, self.payload)
           end
         elseif self.mode == "control" then
-          rooms[self.key].recorder:send_binary(self.payload)
+          if recorder then
+            recorder:send(self.fin, self.opcode, self.payload)
+          end
         end
       end
       function ws:on_pong()
@@ -104,7 +109,7 @@ while true do
       local ws = service:get_socket(s)
       local result, message, data = s:receive(4096)
       if result then
-        ws:read(data)
+        ws:read(result)
       else
         if message == "timeout" then
           if data then

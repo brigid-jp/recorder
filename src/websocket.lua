@@ -39,12 +39,18 @@ local function new(service, socket)
   return self
 end
 
-local function send(self, opcode, payload)
+local function send(self, fin, opcode, payload)
   if not payload then
     payload = ""
   end
 
-  local data = { string.char(0x80 | opcode) }
+  local data = {}
+
+  if fin then
+    data[1] = string.char(opcode | 0x80)
+  else
+    data[1] = string.char(opcode)
+  end
 
   local n = #payload
   if n < 126 then
@@ -80,16 +86,12 @@ function class:close()
   end
 end
 
-function class:send_text(payload)
-  send(self, 0x1, payload)
-end
-
-function class:send_binary(payload)
-  send(self, 0x2, payload)
+function class:send(fin, opcode, payload)
+  send(self, fin, opcode, payload)
 end
 
 function class:send_ping(payload)
-  send(self, 0x9, payload)
+  send(self, true, 0x9, payload)
 end
 
 function class:read(data)
@@ -155,6 +157,10 @@ function class:read(data)
 
   if self.state == 3 then
     if #self.buffer >= 2 then
+      if self.opcode ~= 0 then
+        self.opcode_prev = self.opcode
+      end
+
       local a, b = self.buffer:byte(1, 2)
       self.fin = a & 0x80 ~= 0
       self.rsv1 = a & 0x40 ~= 0
@@ -216,20 +222,24 @@ function class:read(data)
       end
       self.payload = table.concat(payload)
 
-      if self.opcode == 0x01 then
+      local opcode = self.opcode
+      if opcode == 0 then
+        opcode = self.opcode_prev
+      end
+      if opcode == 0x01 then
         if self.on_text then
           self:on_text()
         end
-      elseif self.opcode == 0x02 then
+      elseif opcode == 0x02 then
         if self.on_binary then
           self:on_binary()
         end
-      elseif self.opcode == 0x8 then
-        send(self, 0x8)
+      elseif opcode == 0x8 then
+        send(self, true, 0x8)
         return self:close()
-      elseif self.opcode == 0x9 then
-        send(self, 0xA, self.payload)
-      elseif self.opcode == 0xA then
+      elseif opcode == 0x9 then
+        send(self, true, 0xA, self.payload)
+      elseif opcode == 0xA then
         if self.on_pong then
           self:on_pong()
         end

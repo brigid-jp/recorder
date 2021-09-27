@@ -76,29 +76,65 @@ addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  let test = async () => {
-    update_session()
-
-    var data = new Blob([ format_date(new Date()), "\n" ])
-    upload(data, true).catch(e => log(e))
-  }
-
-  let start = async () => {
-    update_session()
+  let start = () => {
+    if (recorder) {
+      log("[error] recorder started")
+      return false
+    }
 
     log("start")
+    update_session()
     recorder = new MediaRecorder(stream)
     recorder.ondataavailable = ev => {
       let data = ev.data
-      // log("data", data.type, data.size)
       upload(data).catch(e => log(e))
     }
     recorder.start(1000)
+
+    return true
   }
 
-  let stop = async () => {
+  let stop = () => {
+    if (!recorder) {
+      log("[error] recorder undefined")
+      return false
+    }
+
     log("stop")
     recorder.stop()
+    recorder = undefined
+
+    return true
+  }
+
+  let onmessage = async (ev) => {
+    log("onmessage", typeof ev.data)
+    if (typeof ev.data === "string") {
+      log("ontext", ev.data)
+      let data = JSON.parse(ev.data)
+
+      if (data.command === "status") {
+        socket.send(JSON.stringify({
+          command: data.command,
+          result: !!recorder,
+          session: session,
+          session_counter: session_counter,
+        }))
+      } else if (data.command === "capture") {
+        let track = stream.getVideoTracks()[0]
+        let capture = new ImageCapture(track)
+        let photo = await capture.takePhoto()
+        socket.send(photo)
+      } else if (data.command === "start") {
+        let result = start()
+        socket.send(JSON.stringify({ command: data.command, result: result }))
+      } else if (data.command === "stop") {
+        let result = stop()
+        socket.send(JSON.stringify({ command: data.command, result: result }))
+      }
+    } else {
+      log("onbinary", ev.data.size)
+    }
   }
 
   (async () => {
@@ -152,18 +188,6 @@ addEventListener("DOMContentLoaded", () => {
       update_video()
     })
 
-    document.getElementById("test").onclick = () => {
-      test().catch(e => log(e))
-    }
-
-    document.getElementById("start").onclick = () => {
-      start().catch(e => log(e))
-    }
-
-    document.getElementById("stop").onclick = () => {
-      stop().catch(e => log(e))
-    }
-
     document.getElementById("open").onclick = () => {
       if (socket) {
         log("[error] already opened")
@@ -183,18 +207,11 @@ addEventListener("DOMContentLoaded", () => {
       }
 
       socket.onerror = (ev) => {
-        log("onerror", ev.message)
+        log("onerror", ev)
       }
 
       socket.onmessage = (ev) => {
-        log("onmessage", typeof ev.data)
-        if (typeof ev.data === "string") {
-          log("ontext", ev.data)
-          let data = JSON.parse(ev.data)
-          log("onjson", data)
-        } else {
-          log("onbinary", ev.data.size)
-        }
+        onmessage(ev).catch(e => log(e))
       }
     }
 
@@ -205,5 +222,8 @@ addEventListener("DOMContentLoaded", () => {
       }
       socket.close()
     }
+
+    document.getElementById("start").onclick = start
+    document.getElementById("stop").onclick = stop
   })().catch(e => log(e))
 })
