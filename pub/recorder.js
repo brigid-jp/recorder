@@ -3,7 +3,6 @@ addEventListener("DOMContentLoaded", () => {
   let recorder
   let session
   let session_counter
-  let authorization
 
   let log = (...args) => {
     console.log(args)
@@ -83,10 +82,6 @@ addEventListener("DOMContentLoaded", () => {
   let update_session = () => {
     session = format_date(new Date()) + "-" + format(6, Math.floor(Math.random() * 999999))
     session_counter = 0
-
-    let username = document.getElementById("username").value
-    let password = document.getElementById("password").value
-    authorization = "Basic " + btoa(username + ":" + password)
   }
 
   let upload = async (data, flag) => {
@@ -101,15 +96,12 @@ addEventListener("DOMContentLoaded", () => {
       suffix = ".dat"
     }
 
-    let path = "/dav/" + session + "-" + format(8, ++session_counter) + suffix
+    let path = "/recorder/dav/" + session + "-" + format(8, ++session_counter) + suffix
 
     let started = new Date()
     let response = await fetch(path, {
       method: "PUT",
-      headers: {
-        "Content-Type": data.type,
-        Authorization: authorization,
-      },
+      headers: { "Content-Type": data.type },
       body: data,
     })
     let finished = new Date()
