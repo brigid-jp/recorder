@@ -49,8 +49,8 @@ while true do
       assert(s:settimeout(0))
       local ws = websocket(service, s)
 
-      function ws:on_open(host, serv, family)
-        write(("on_open[uri=%s][host=%s][serv=%s][family=%s]\n"):format(self.uri, host, serv, family))
+      function ws:on_open()
+        write(("on_open[uri=%s][host=%s][serv=%s][family=%s]\n"):format(self.uri, self.host, self.serv, self.family))
         local mode, key = self.uri:match "/([^/]+)/([^/]+)$"
         if mode == "recorder" then
           self.mode = "recorder"
@@ -70,8 +70,8 @@ while true do
           return false
         end
       end
-      function ws:on_close(host, serv, family)
-        write(("on_close[uri=%s][host=%s][serv=%s][family=%s]\n"):format(self.uri, host, serv, family))
+      function ws:on_close()
+        write(("on_close[uri=%s][host=%s][serv=%s][family=%s]\n"):format(self.uri, self.host, self.serv, self.family))
         if self.ping_timer then
           service:remove_timer(self.ping_timer)
         end
