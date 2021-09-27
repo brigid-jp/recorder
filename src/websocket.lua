@@ -22,27 +22,18 @@ Sec-WebSocket-Accept: %s
 
 ]]):gsub("\n", "\r\n")
 
-local function new(sockets, socket)
+local function new(service, socket)
   local self = setmetatable({
-    sockets = sockets;
+    service = service;
     socket = socket;
     buffer = "";
     state = 1
   }, metatable)
-  sockets[socket] = self
+  service:add_socket(socket, self)
   return self
 end
 
-function class:close()
-  local host, serv, family = assert(self.socket:getpeername())
-  self.socket:close()
-  self.sockets[self.socket] = nil
-  if self.on_close then
-    self:on_close(host, serv, family)
-  end
-end
-
-function class:send(opcode, payload)
+local function send(self, opcode, payload)
   if not payload then
     payload = ""
   end
@@ -74,16 +65,25 @@ function class:send(opcode, payload)
   self.socket:send(table.concat(data))
 end
 
+function class:close()
+  local host, serv, family = assert(self.socket:getpeername())
+  self.socket:close()
+  self.service:remove_socket(self.socket)
+  if self.on_close then
+    self:on_close(host, serv, family)
+  end
+end
+
 function class:send_text(payload)
-  self:send(0x1, payload)
+  send(self, 0x1, payload)
 end
 
 function class:send_binary(payload)
-  self:send(0x2, payload)
+  send(self, 0x2, payload)
 end
 
 function class:send_ping(payload)
-  self:send(0x9, payload)
+  send(self, 0x9, payload)
 end
 
 function class:read(data)
@@ -212,10 +212,10 @@ function class:read(data)
           self:on_binary()
         end
       elseif self.opcode == 0x8 then
-        self:send(0x8)
+        send(self, 0x8)
         return self:close()
       elseif self.opcode == 0x9 then
-        self:send(0xA, self.payload)
+        send(self, 0xA, self.payload)
       elseif self.opcode == 0xA then
         if self.on_pong then
           self:on_pong()
@@ -229,7 +229,7 @@ function class:read(data)
 end
 
 return setmetatable(class, {
-  __call = function (_, sockets, socket)
-    return setmetatable(new(sockets, socket), metatable)
+  __call = function (_, service, socket)
+    return setmetatable(new(service, socket), metatable)
   end;
 })

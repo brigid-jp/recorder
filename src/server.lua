@@ -5,20 +5,20 @@
 -- https://opensource.org/licenses/mit-license.php
 
 local socket = require "socket"
+local service = require "service"
 local websocket = require "websocket"
 
 local host, serv = ...
 
+local service = service()
 local server = assert(socket.bind(host, serv))
 assert(server:settimeout(0))
-
-local websockets = {}
 
 while true do
   local recv = { server }
   local send = {}
 
-  for s in pairs(websockets) do
+  for s in service:each_socket() do
     recv[#recv + 1] = s
   end
 
@@ -30,7 +30,7 @@ while true do
     if s == server then
       local s = assert(server:accept())
       assert(s:settimeout(0))
-      local ws = websocket(websockets, s)
+      local ws = websocket(service, s)
 
       function ws:on_open(host, serv, family)
         io.write(("on_open[%s,%s,%s]\n"):format(host, serv, family))
@@ -48,7 +48,7 @@ while true do
         io.write(("on_pong[opcode=0x%X][%s]\n"):format(self.opcode, self.payload))
       end
     else
-      local ws = websockets[s]
+      local ws = service:get_socket(s)
       local result, message, data = s:receive(4096)
       if result then
         ws:read(data)
