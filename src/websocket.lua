@@ -192,7 +192,15 @@ function class:read(data)
       end
       self.payload = table.concat(payload)
 
-      if self.opcode == 0x8 then
+      if self.opcode == 0x01 then
+        if self.on_text then
+          self:on_text()
+        end
+      elseif self.opcode == 0x02 then
+        if self.on_binary then
+          self:on_binary()
+        end
+      elseif self.opcode == 0x8 then
         self:send(0x8)
         return self:close()
       elseif self.opcode == 0x9 then
@@ -200,12 +208,6 @@ function class:read(data)
       elseif self.opcode == 0xA then
         if self.on_pong then
           self:on_pong()
-        end
-      else
-        -- TODO text or binary?
-        -- TODO event-driven httpd?
-        if self.on_message then
-          self:on_message()
         end
       end
 

@@ -41,10 +41,13 @@ while true do
       assert(s:settimeout(0))
       local ws = websocket(websockets, s)
 
-      function ws:on_pong()
+      function ws:on_text()
         io.write(("[opcode=0x%X][%s]\n"):format(self.opcode, self.payload))
       end
-      function ws:on_message()
+      function ws:on_binary()
+        io.write(("[opcode=0x%X][%s]\n"):format(self.opcode, self.payload))
+      end
+      function ws:on_pong()
         io.write(("[opcode=0x%X][%s]\n"):format(self.opcode, self.payload))
       end
     else
