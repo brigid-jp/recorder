@@ -30,8 +30,12 @@ local function new(sockets, socket)
 end
 
 function class:close()
+  local host, serv, family = assert(self.socket:getpeername())
   self.socket:close()
   self.sockets[self.socket] = nil
+  if self.on_close then
+    self:on_close(host, serv, family)
+  end
 end
 
 function class:send(opcode, payload)
@@ -74,16 +78,8 @@ function class:send_binary(payload)
   self:send(0x2, payload)
 end
 
-function class:send_close(payload)
-  self:send(0x8, payload)
-end
-
 function class:send_ping(payload)
   self:send(0x9, payload)
-end
-
-function class:send_pong(payload)
-  self:send(0xA, payload)
 end
 
 function class:read(data)
@@ -130,6 +126,9 @@ function class:read(data)
             :update "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
             :digest()
         )))
+        if self.on_open then
+          self:on_open(assert(self.socket:getpeername()))
+        end
       end
 
       self.buffer = buffer_next
@@ -200,18 +199,22 @@ function class:read(data)
       end
       self.payload = table.concat(payload)
 
-      if self.opcode == 0x8 then
-        self:send_close()
+      if self.opcode == 0x01 then
+        if self.on_text then
+          self:on_text()
+        end
+      elseif self.opcode == 0x02 then
+        if self.on_binary then
+          self:on_binary()
+        end
+      elseif self.opcode == 0x8 then
+        self:send(0x8)
         return self:close()
       elseif self.opcode == 0x9 then
-        self:send_pong(self.payload)
+        self:send(0xA, self.payload)
       elseif self.opcode == 0xA then
         if self.on_pong then
           self:on_pong()
-        end
-      else
-        if self.on_message then
-          self:on_message()
         end
       end
 
