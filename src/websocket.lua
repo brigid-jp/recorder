@@ -78,11 +78,10 @@ local function send(self, fin, opcode, payload)
 end
 
 function class:close()
-  local host, serv, family = assert(self.socket:getpeername())
   self.socket:close()
   self.service:remove_socket(self.socket)
   if self.on_close then
-    self:on_close(host, serv, family)
+    self:on_close()
   end
 end
 
@@ -133,8 +132,9 @@ function class:read(data)
         return self:close()
       else
         local opened = true
+        self.host, self.serv, self.family = assert(self.socket:getpeername())
         if self.on_open then
-          opened = self:on_open(assert(self.socket:getpeername()))
+          opened = self:on_open()
         end
 
         if opened == false then
