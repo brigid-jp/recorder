@@ -13,13 +13,6 @@ addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("key").textContent = key
 
-  let update_video = async () => {
-    let element = document.getElementById("video")
-    if (element) {
-      element.srcObject = stream
-    }
-  }
-
   let update_stream = async () => {
     stream.getTracks().forEach(track => {
       track.stop()
@@ -41,12 +34,6 @@ addEventListener("DOMContentLoaded", () => {
     })
 
     stream = await navigator.mediaDevices.getUserMedia(constraints)
-    update_video()
-  }
-
-  let update_session = () => {
-    session = format_date(new Date()) + "-" + format(6, Math.floor(Math.random() * 999999))
-    session_counter = 0
   }
 
   let upload = async (data, flag) => {
@@ -76,29 +63,110 @@ addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  let test = async () => {
-    update_session()
-
-    var data = new Blob([ format_date(new Date()), "\n" ])
-    upload(data, true).catch(e => log(e))
-  }
-
-  let start = async () => {
-    update_session()
+  let start = () => {
+    if (recorder) {
+      log("[error] recorder started")
+      return false
+    }
 
     log("start")
+    session = format_date(new Date()) + "-" + format(6, Math.floor(Math.random() * 999999))
+    session_counter = 0
     recorder = new MediaRecorder(stream)
     recorder.ondataavailable = ev => {
       let data = ev.data
-      // log("data", data.type, data.size)
       upload(data).catch(e => log(e))
     }
     recorder.start(1000)
+
+    return true
   }
 
-  let stop = async () => {
+  let stop = () => {
+    if (!recorder) {
+      log("[error] recorder undefined")
+      return false
+    }
+
     log("stop")
     recorder.stop()
+    recorder = undefined
+
+    return true
+  }
+
+  let onmessage = async (ev) => {
+    log("onmessage", typeof ev.data)
+    if (typeof ev.data === "string") {
+      log("ontext", ev.data)
+      let data = JSON.parse(ev.data)
+
+      if (data.command === "status") {
+        socket.send(JSON.stringify({
+          command: data.command,
+          result: !!recorder,
+          session: session,
+          session_counter: session_counter,
+        }))
+      } else if (data.command === "capture") {
+        let track = stream.getVideoTracks()[0]
+        let capture = new ImageCapture(track)
+
+        let caps = await capture.getPhotoCapabilities()
+        log("caps max", caps.imageWidth.max, caps.imageHeight.max)
+        log("caps min", caps.imageWidth.min, caps.imageHeight.min)
+        log("caps step", caps.imageWidth.step, caps.imageHeight.step)
+
+        let photo = await capture.takePhoto({
+          imageWidth: caps.imageWidth.min,
+          imageHeight: caps.imageHeight.min,
+        })
+        socket.send(photo)
+      } else if (data.command === "start") {
+        let result = start()
+        socket.send(JSON.stringify({ command: data.command, result: result }))
+      } else if (data.command === "stop") {
+        let result = stop()
+        socket.send(JSON.stringify({ command: data.command, result: result }))
+      }
+    } else {
+      log("onbinary", ev.data.size)
+    }
+  }
+
+  let open
+
+  open = () => {
+    try {
+      socket = new WebSocket("wss://nozomi.dromozoa.com/recorder-socket/recorder/" + key)
+      socket.binaryType = "blob"
+
+      socket.onopen = () => {
+        log("onopen")
+      }
+
+      socket.onclose = () => {
+        log("onclose")
+        socket = undefined
+
+        if (reopen) {
+          setTimeout(open, reopen)
+        }
+      }
+
+      socket.onerror = (ev) => {
+        log("onerror", ev)
+      }
+
+      socket.onmessage = (ev) => {
+        onmessage(ev).catch(e => log(e))
+      }
+
+      return true
+    } catch (e) {
+      log("[error] " + e.message)
+    }
+    return false
   }
 
   (async () => {
@@ -148,21 +216,7 @@ addEventListener("DOMContentLoaded", () => {
         update_stream().catch(e => log(e))
       }
       document.getElementById(key + "-selector").appendChild(element)
-
-      update_video()
     })
-
-    document.getElementById("test").onclick = () => {
-      test().catch(e => log(e))
-    }
-
-    document.getElementById("start").onclick = () => {
-      start().catch(e => log(e))
-    }
-
-    document.getElementById("stop").onclick = () => {
-      stop().catch(e => log(e))
-    }
 
     document.getElementById("open").onclick = () => {
       if (socket) {
@@ -170,32 +224,8 @@ addEventListener("DOMContentLoaded", () => {
         return
       }
 
-      socket = new WebSocket("wss://nozomi.dromozoa.com/recorder-socket/recorder/" + key)
-      socket.binaryType = "blob"
-
-      socket.onopen = () => {
-        log("onopen")
-      }
-
-      socket.onclose = () => {
-        log("onclose")
-        socket = undefined
-      }
-
-      socket.onerror = (ev) => {
-        log("onerror", ev.message)
-      }
-
-      socket.onmessage = (ev) => {
-        log("onmessage", typeof ev.data)
-        if (typeof ev.data === "string") {
-          log("ontext", ev.data)
-          let data = JSON.parse(ev.data)
-          log("onjson", data)
-        } else {
-          log("onbinary", ev.data.size)
-        }
-      }
+      reopen = 10000
+      open()
     }
 
     document.getElementById("close").onclick = () => {
@@ -203,7 +233,12 @@ addEventListener("DOMContentLoaded", () => {
         log("[error] socket undefined")
         return
       }
+
+      reopen = undefined
       socket.close()
     }
+
+    document.getElementById("start").onclick = start
+    document.getElementById("stop").onclick = stop
   })().catch(e => log(e))
 })

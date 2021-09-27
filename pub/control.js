@@ -36,15 +36,9 @@ addEventListener("DOMContentLoaded", () => {
         if (typeof ev.data === "string") {
           log("ontext", ev.data)
           let data = JSON.parse(ev.data)
-          log("onjson", data)
-
-          if (data.command === "status") {
-          } else if (data.command === "capture") {
-          } else if (data.command === "start") {
-          } else if (data.command === "stop") {
-          }
         } else {
           log("onbinary", ev.data.size)
+          document.getElementById("image").src = URL.createObjectURL(ev.data)
         }
     }
   }
