@@ -9,7 +9,7 @@ local service = require "service"
 local websocket = require "websocket"
 
 local select_timer = 1
-local ping_timer = 10
+local ping_timer = 1
 
 local host, serv = ...
 
@@ -19,7 +19,7 @@ local server = assert(socket.bind(host, serv))
 assert(server:settimeout(0))
 
 local function ping(ws)
-  -- ws:send_ping()
+  ws:send_ping()
   ws.ping_timer = service:add_timer(function () ping(ws) end, ping_timer)
 end
 
@@ -101,7 +101,7 @@ while true do
         end
       end
       function ws:on_pong()
-        io.write(("on_pong[opcode=0x%X][payload=%s]\n"):format(self.opcode, self.payload))
+        io.write(("on_pong[opcode=0x%X][size=%d]\n"):format(self.opcode, #self.payload))
       end
 
       ws.ping_timer = service:add_timer(function () ping(ws) end, ping_timer)

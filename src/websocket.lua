@@ -157,8 +157,8 @@ function class:read(data)
 
   if self.state == 3 then
     if #self.buffer >= 2 then
-      if self.opcode ~= 0 then
-        self.opcode_prev = self.opcode
+      if self.opcode == 0x1 or self.opcode == 0x2 then
+        self.opcode_cont = self.opcode
       end
 
       local a, b = self.buffer:byte(1, 2)
@@ -224,7 +224,7 @@ function class:read(data)
 
       local opcode = self.opcode
       if opcode == 0 then
-        opcode = self.opcode_prev
+        opcode = self.opcode_cont
       end
       if opcode == 0x01 then
         if self.on_text then
