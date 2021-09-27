@@ -8,10 +8,10 @@ local socket = require "socket"
 local service = require "service"
 local websocket = require "websocket"
 
-local select_timer = 1
-local ping_timer = 30
+local host, serv, ping_timer = ...
 
-local host, serv = ...
+local select_timer = 1
+local ping_timer = tonumber(ping_timer) or 60
 
 local service = service()
 local rooms = {}
@@ -19,8 +19,16 @@ local server = assert(socket.bind(host, serv))
 assert(server:settimeout(0))
 
 local function ping(ws)
+  ws.ping_time = socket.gettime()
   ws:send_ping()
   ws.ping_timer = service:add_timer(function () ping(ws) end, ping_timer)
+end
+
+local function write(...)
+  local current_time = socket.gettime()
+  local t = math.floor(current_time)
+  local s = math.floor((current_time - t) * 1000)
+  io.write("[", os.date("!%Y-%m-%dT%H:%M:%S", t), ".", ("%03d"):format(s), "] ", ...)
 end
 
 while true do
@@ -42,7 +50,7 @@ while true do
       local ws = websocket(service, s)
 
       function ws:on_open(host, serv, family)
-        io.write(("on_open[uri=%s][host=%s][serv=%s][family=%s]\n"):format(self.uri, host, serv, family))
+        write(("on_open[uri=%s][host=%s][serv=%s][family=%s]\n"):format(self.uri, host, serv, family))
         local mode, key = self.uri:match "/([^/]+)/([^/]+)$"
         if mode == "recorder" then
           self.mode = "recorder"
@@ -63,7 +71,7 @@ while true do
         end
       end
       function ws:on_close(host, serv, family)
-        io.write(("on_close[uri=%s][host=%s][serv=%s][family=%s]\n"):format(self.uri, host, serv, family))
+        write(("on_close[uri=%s][host=%s][serv=%s][family=%s]\n"):format(self.uri, host, serv, family))
         if self.ping_timer then
           service:remove_timer(self.ping_timer)
         end
@@ -76,7 +84,7 @@ while true do
         end
       end
       function ws:on_text()
-        io.write(("on_text[fin=%s][opcode=0x%X][payload=%s]\n"):format(self.fin, self.opcode, self.payload))
+        write(("on_text[uri=%s][fin=%s][payload=%s]\n"):format(self.uri, self.fin, self.payload))
         if self.mode == "recorder" then
           for _, ws in pairs(rooms[self.key].controls) do
             ws:send(self.fin, self.opcode, self.payload)
@@ -89,7 +97,7 @@ while true do
         end
       end
       function ws:on_binary()
-        io.write(("on_binary[fin=%s][opcode=0x%X][size=%d]\n"):format(self.fin, self.opcode, #self.payload))
+        write(("on_binary[uri=%s][fin=%s][size=%d]\n"):format(self.uri, self.fin, #self.payload))
         if self.mode == "recorder" then
           for _, ws in pairs(rooms[self.key].controls) do
             ws:send(self.fin, self.opcode, self.payload)
@@ -101,7 +109,8 @@ while true do
         end
       end
       function ws:on_pong()
-        io.write(("on_pong[opcode=0x%X][size=%d]\n"):format(self.opcode, #self.payload))
+        local pong_time = socket.gettime()
+        write(("on_pong[uri=%s][time=%g]\n"):format(self.uri, pong_time - self.ping_time))
       end
 
       ws.ping_timer = service:add_timer(function () ping(ws) end, ping_timer)

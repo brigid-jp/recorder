@@ -215,6 +215,7 @@ addEventListener("DOMContentLoaded", () => {
         log("[error] socket undefined")
         return
       }
+
       socket.close()
     }
 
