@@ -42,10 +42,10 @@ while true do
       local ws = websocket(websockets, s)
 
       function ws:on_pong()
-        io.write(("[opcode=%x][%s]\n"):format(self.opcode, self.payload))
+        io.write(("[opcode=0x%X][%s]\n"):format(self.opcode, self.payload))
       end
       function ws:on_message()
-        io.write(("[opcode=%x][%s]\n"):format(self.opcode, self.payload))
+        io.write(("[opcode=0x%X][%s]\n"):format(self.opcode, self.payload))
       end
     else
       local ws = websockets[s]

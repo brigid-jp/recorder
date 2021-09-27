@@ -74,18 +74,8 @@ function class:send_binary(payload)
   self:send(0x2, payload)
 end
 
--- TODO private?
-function class:send_close(payload)
-  self:send(0x8, payload)
-end
-
 function class:send_ping(payload)
   self:send(0x9, payload)
-end
-
--- TODO private?
-function class:send_pong(payload)
-  self:send(0xA, payload)
 end
 
 function class:read(data)
@@ -203,10 +193,10 @@ function class:read(data)
       self.payload = table.concat(payload)
 
       if self.opcode == 0x8 then
-        self:send_close()
+        self:send(0x8)
         return self:close()
       elseif self.opcode == 0x9 then
-        self:send_pong(self.payload)
+        self:send(0xA, self.payload)
       elseif self.opcode == 0xA then
         if self.on_pong then
           self:on_pong()
