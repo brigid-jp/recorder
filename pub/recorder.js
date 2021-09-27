@@ -7,51 +7,11 @@ addEventListener("DOMContentLoaded", () => {
   let recorder
   let session
   let session_counter
+  let params = new URLSearchParams(document.location.search.substring(1))
+  let key = params.get("key")
   let socket
 
-  let log = (...args) => {
-    console.log(args)
-    document.getElementById("log").textContent += args.join(" ") + "\n"
-  }
-
-  let format = (width, value) => {
-    let s = value.toString()
-    let w = width - s.length
-    if (w > 0) {
-      return "0".repeat(w) + s
-    } else {
-      return s
-    }
-  }
-
-  let format_date = date => {
-    return date.getFullYear() +
-      format(2, date.getMonth() + 1) +
-      format(2, date.getDate()) + "_" +
-      format(2, date.getHours()) +
-      format(2, date.getMinutes()) +
-      format(2, date.getSeconds()) + "_" +
-      format(3, date.getMilliseconds())
-  }
-
-  let create_element = (name, attributes, values) => {
-    let element = document.createElement(name)
-    Object.entries(attributes).forEach(([key, value]) => {
-      if (value) {
-        element.setAttribute(key, value)
-      }
-    })
-    if (values) {
-      values.forEach((value) => {
-        if (value.nodeType) {
-          element.appendChild(value)
-        } else {
-          element.appendChild(document.createTextNode(value))
-        }
-      })
-    }
-    return element
-  }
+  document.getElementById("key").textContent = key
 
   let update_video = async () => {
     let element = document.getElementById("video")
@@ -190,20 +150,27 @@ addEventListener("DOMContentLoaded", () => {
       document.getElementById(key + "-selector").appendChild(element)
 
       update_video()
+    })
 
-      document.getElementById("test").onclick = () => {
-        test().catch(e => log(e))
+    document.getElementById("test").onclick = () => {
+      test().catch(e => log(e))
+    }
+
+    document.getElementById("start").onclick = () => {
+      start().catch(e => log(e))
+    }
+
+    document.getElementById("stop").onclick = () => {
+      stop().catch(e => log(e))
+    }
+
+    document.getElementById("open").onclick = () => {
+      if (socket) {
+        log("[error] already opened")
+        return
       }
 
-      document.getElementById("start").onclick = () => {
-        start().catch(e => log(e))
-      }
-
-      document.getElementById("stop").onclick = () => {
-        stop().catch(e => log(e))
-      }
-
-      socket = new WebSocket("wss://nozomi.dromozoa.com/recorder-socket")
+      socket = new WebSocket("wss://nozomi.dromozoa.com/recorder-socket/recorder/" + key)
       socket.binaryType = "blob"
 
       socket.onopen = () => {
@@ -212,6 +179,7 @@ addEventListener("DOMContentLoaded", () => {
 
       socket.onclose = () => {
         log("onclose")
+        socket = undefined
       }
 
       socket.onerror = (ev) => {
@@ -221,6 +189,14 @@ addEventListener("DOMContentLoaded", () => {
       socket.onmessage = (ev) => {
         log("onmessage", ev.data)
       }
-    })
+    }
+
+    document.getElementById("close").onclick = () => {
+      if (!socket) {
+        log("[error] socket undefined")
+        return
+      }
+      socket.close()
+    }
   })().catch(e => log(e))
 })

@@ -8,17 +8,23 @@ local mime = require "mime"
 local class = {}
 local metatable = { __index = class }
 
-local RESPONSE_426 = ([[
-HTTP/1.1 426 Upgrade Required
-Sec-WebSocket-Version: %d
-
-]]):gsub("\n", "\r\n")
-
 local RESPONSE_101 = ([[
 HTTP/1.1 101 Switching Protocols
 Upgrade: websocket
 Connection: upgrade
 Sec-WebSocket-Accept: %s
+
+]]):gsub("\n", "\r\n")
+
+local RESPONSE_404 = ([[
+HTTP/1.1 404 Not Found
+
+]]):gsub("\n", "\r\n")
+
+
+local RESPONSE_426 = ([[
+HTTP/1.1 426 Upgrade Required
+Sec-WebSocket-Version: %d
 
 ]]):gsub("\n", "\r\n")
 
@@ -124,15 +130,22 @@ function class:read(data)
         self.socket:send(RESPONSE_426:format(13))
         return self:close()
       else
+        local opened = true
+        if self.on_open then
+          opened = self:on_open(assert(self.socket:getpeername()))
+        end
+
+        if opened == false then
+          self.socket:send(RESPONSE_404)
+          return self:close()
+        end
+
         self.socket:send(RESPONSE_101:format(mime.b64(
           brigid.hasher "sha1"
             :update(headers["Sec-WebSocket-Key"])
             :update "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
             :digest()
         )))
-        if self.on_open then
-          self:on_open(assert(self.socket:getpeername()))
-        end
       end
 
       self.buffer = buffer_next
