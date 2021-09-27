@@ -134,6 +134,41 @@ addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  let open
+
+  open = () => {
+    try {
+      socket = new WebSocket("wss://nozomi.dromozoa.com/recorder-socket/recorder/" + key)
+      socket.binaryType = "blob"
+
+      socket.onopen = () => {
+        log("onopen")
+      }
+
+      socket.onclose = () => {
+        log("onclose")
+        socket = undefined
+
+        if (reopen) {
+          setTimeout(open, reopen)
+        }
+      }
+
+      socket.onerror = (ev) => {
+        log("onerror", ev)
+      }
+
+      socket.onmessage = (ev) => {
+        onmessage(ev).catch(e => log(e))
+      }
+
+      return true
+    } catch (e) {
+      log("[error] " + e.message)
+    }
+    return false
+  }
+
   (async () => {
     stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     let devices = await navigator.mediaDevices.enumerateDevices()
@@ -189,25 +224,8 @@ addEventListener("DOMContentLoaded", () => {
         return
       }
 
-      socket = new WebSocket("wss://nozomi.dromozoa.com/recorder-socket/recorder/" + key)
-      socket.binaryType = "blob"
-
-      socket.onopen = () => {
-        log("onopen")
-      }
-
-      socket.onclose = () => {
-        log("onclose")
-        socket = undefined
-      }
-
-      socket.onerror = (ev) => {
-        log("onerror", ev)
-      }
-
-      socket.onmessage = (ev) => {
-        onmessage(ev).catch(e => log(e))
-      }
+      reopen = 10000
+      open()
     }
 
     document.getElementById("close").onclick = () => {
@@ -216,6 +234,7 @@ addEventListener("DOMContentLoaded", () => {
         return
       }
 
+      reopen = undefined
       socket.close()
     }
 
