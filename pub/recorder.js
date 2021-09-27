@@ -1,60 +1,17 @@
+// Copyright (c) 2021 <dev@brigid.jp>
+// This software is released under the MIT License.
+// https://opensource.org/licenses/mit-license.php
+
 addEventListener("DOMContentLoaded", () => {
   let stream
   let recorder
   let session
   let session_counter
-  let authorization
+  let params = new URLSearchParams(document.location.search.substring(1))
+  let key = params.get("key")
+  let socket
 
-  let log = (...args) => {
-    console.log(args)
-    document.getElementById("log").textContent += args.join(" ") + "\n"
-  }
-
-  let format = (width, value) => {
-    let s = value.toString()
-    let w = width - s.length
-    if (w > 0) {
-      return "0".repeat(w) + s
-    } else {
-      return s
-    }
-  }
-
-  let format_date = date => {
-    return date.getFullYear() +
-      format(2, date.getMonth() + 1) +
-      format(2, date.getDate()) + "_" +
-      format(2, date.getHours()) +
-      format(2, date.getMinutes()) +
-      format(2, date.getSeconds()) + "_" +
-      format(3, date.getMilliseconds())
-  }
-
-  let create_element = (name, attributes, values) => {
-    let element = document.createElement(name)
-    Object.entries(attributes).forEach(([key, value]) => {
-      if (value) {
-        element.setAttribute(key, value)
-      }
-    })
-    if (values) {
-      values.forEach((value) => {
-        if (value.nodeType) {
-          element.appendChild(value)
-        } else {
-          element.appendChild(document.createTextNode(value))
-        }
-      })
-    }
-    return element
-  }
-
-  let update_video = async () => {
-    let element = document.getElementById("video")
-    if (element) {
-      element.srcObject = stream
-    }
-  }
+  document.getElementById("key").textContent = key
 
   let update_stream = async () => {
     stream.getTracks().forEach(track => {
@@ -77,16 +34,6 @@ addEventListener("DOMContentLoaded", () => {
     })
 
     stream = await navigator.mediaDevices.getUserMedia(constraints)
-    update_video()
-  }
-
-  let update_session = () => {
-    session = format_date(new Date()) + "-" + format(6, Math.floor(Math.random() * 999999))
-    session_counter = 0
-
-    let username = document.getElementById("username").value
-    let password = document.getElementById("password").value
-    authorization = "Basic " + btoa(username + ":" + password)
   }
 
   let upload = async (data, flag) => {
@@ -101,15 +48,12 @@ addEventListener("DOMContentLoaded", () => {
       suffix = ".dat"
     }
 
-    let path = "/dav/" + session + "-" + format(8, ++session_counter) + suffix
+    let path = "/recorder/dav/" + session + "-" + format(8, ++session_counter) + suffix
 
     let started = new Date()
     let response = await fetch(path, {
       method: "PUT",
-      headers: {
-        "Content-Type": data.type,
-        Authorization: authorization,
-      },
+      headers: { "Content-Type": data.type },
       body: data,
     })
     let finished = new Date()
@@ -119,29 +63,110 @@ addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  let test = async () => {
-    update_session()
-
-    var data = new Blob([ format_date(new Date()), "\n" ])
-    upload(data, true).catch(e => log(e))
-  }
-
-  let start = async () => {
-    update_session()
+  let start = () => {
+    if (recorder) {
+      log("[error] recorder started")
+      return false
+    }
 
     log("start")
+    session = format_date(new Date()) + "-" + format(6, Math.floor(Math.random() * 999999))
+    session_counter = 0
     recorder = new MediaRecorder(stream)
     recorder.ondataavailable = ev => {
       let data = ev.data
-      // log("data", data.type, data.size)
       upload(data).catch(e => log(e))
     }
     recorder.start(1000)
+
+    return true
   }
 
-  let stop = async () => {
+  let stop = () => {
+    if (!recorder) {
+      log("[error] recorder undefined")
+      return false
+    }
+
     log("stop")
     recorder.stop()
+    recorder = undefined
+
+    return true
+  }
+
+  let onmessage = async (ev) => {
+    log("onmessage", typeof ev.data)
+    if (typeof ev.data === "string") {
+      log("ontext", ev.data)
+      let data = JSON.parse(ev.data)
+
+      if (data.command === "status") {
+        socket.send(JSON.stringify({
+          command: data.command,
+          result: !!recorder,
+          session: session,
+          session_counter: session_counter,
+        }))
+      } else if (data.command === "capture") {
+        let track = stream.getVideoTracks()[0]
+        let capture = new ImageCapture(track)
+
+        let caps = await capture.getPhotoCapabilities()
+        log("caps max", caps.imageWidth.max, caps.imageHeight.max)
+        log("caps min", caps.imageWidth.min, caps.imageHeight.min)
+        log("caps step", caps.imageWidth.step, caps.imageHeight.step)
+
+        let photo = await capture.takePhoto({
+          imageWidth: caps.imageWidth.min,
+          imageHeight: caps.imageHeight.min,
+        })
+        socket.send(photo)
+      } else if (data.command === "start") {
+        let result = start()
+        socket.send(JSON.stringify({ command: data.command, result: result }))
+      } else if (data.command === "stop") {
+        let result = stop()
+        socket.send(JSON.stringify({ command: data.command, result: result }))
+      }
+    } else {
+      log("onbinary", ev.data.size)
+    }
+  }
+
+  let open
+
+  open = () => {
+    try {
+      socket = new WebSocket("wss://nozomi.dromozoa.com/recorder-socket/recorder/" + key)
+      socket.binaryType = "blob"
+
+      socket.onopen = () => {
+        log("onopen")
+      }
+
+      socket.onclose = () => {
+        log("onclose")
+        socket = undefined
+
+        if (reopen) {
+          setTimeout(open, reopen)
+        }
+      }
+
+      socket.onerror = (ev) => {
+        log("onerror", ev)
+      }
+
+      socket.onmessage = (ev) => {
+        onmessage(ev).catch(e => log(e))
+      }
+
+      return true
+    } catch (e) {
+      log("[error] " + e.message)
+    }
+    return false
   }
 
   (async () => {
@@ -191,20 +216,29 @@ addEventListener("DOMContentLoaded", () => {
         update_stream().catch(e => log(e))
       }
       document.getElementById(key + "-selector").appendChild(element)
-
-      update_video()
-
-      document.getElementById("test").onclick = () => {
-        test().catch(e => log(e))
-      }
-
-      document.getElementById("start").onclick = () => {
-        start().catch(e => log(e))
-      }
-
-      document.getElementById("stop").onclick = () => {
-        stop().catch(e => log(e))
-      }
     })
+
+    document.getElementById("open").onclick = () => {
+      if (socket) {
+        log("[error] already opened")
+        return
+      }
+
+      reopen = 10000
+      open()
+    }
+
+    document.getElementById("close").onclick = () => {
+      if (!socket) {
+        log("[error] socket undefined")
+        return
+      }
+
+      reopen = undefined
+      socket.close()
+    }
+
+    document.getElementById("start").onclick = start
+    document.getElementById("stop").onclick = stop
   })().catch(e => log(e))
 })

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<!--
+  Copyright (c) 2021 <dev@brigid.jp>
+  This software is released under the MIT License.
+  https://opensource.org/licenses/mit-license.php
+-->
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>control</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/4.0.0/github-markdown.min.css">
+<style>
+.markdown-body {
+  box-sizing: border-box;
+  min-width: 200px;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 45px;
+}
+@media (max-width: 767px) {
+  .markdown-body {
+    padding: 15px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="markdown-body">
+
+<h1>control</h1>
+
+<table>
+  <tr>
+    <td>key</td>
+    <td>
+      <div id="key"></div>
+    </td>
+  </tr>
+  <tr>
+    <td>image</td>
+    <td>
+      <img id="image">
+    </td>
+  </tr>
+  <tr>
+    <td>socket</td>
+    <td>
+      <button id="open">open</button>
+      <button id="close">close</button>
+    </td>
+  </tr>
+  <tr>
+    <td>control</td>
+    <td>
+      <button id="status">status</button>
+      <button id="capture">capture</button>
+      <button id="start">start</button>
+      <button id="stop">stop</button>
+    </td>
+  </tr>
+</table>
+
+<pre id="log"></pre>
+
+</div>
+<script src="common.js"></script>
+<script src="control.js"></script>
+</body>
+</html>
+

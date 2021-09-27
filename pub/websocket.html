@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!--
+  Copyright (c) 2021 <dev@brigid.jp>
+  This software is released under the MIT License.
+  https://opensource.org/licenses/mit-license.php
+-->
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>websocket</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/4.0.0/github-markdown.min.css">
+<style>
+.markdown-body {
+  box-sizing: border-box;
+  min-width: 200px;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 45px;
+}
+@media (max-width: 767px) {
+  .markdown-body {
+    padding: 15px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="markdown-body">
+
+<h1>websocket</h1>
+
+<div>
+  <button id="start">start</button>
+</div>
+
+<div>
+  <button id="stop">stop</button>
+</div>
+
+<div>
+  <input type="text" id="text">
+  <button id="send-text">send-text</button>
+</div>
+
+<div>
+  <input type="text" id="binary">
+  <button id="send-binary">send-binary</button>
+</div>
+
+</div>
+<script src="websocket.js"></script>
+</body>
+</html>
