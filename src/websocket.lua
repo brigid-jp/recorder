@@ -74,6 +74,7 @@ function class:send_binary(payload)
   self:send(0x2, payload)
 end
 
+-- TODO private?
 function class:send_close(payload)
   self:send(0x8, payload)
 end
@@ -82,6 +83,7 @@ function class:send_ping(payload)
   self:send(0x9, payload)
 end
 
+-- TODO private?
 function class:send_pong(payload)
   self:send(0xA, payload)
 end
@@ -210,6 +212,8 @@ function class:read(data)
           self:on_pong()
         end
       else
+        -- TODO text or binary?
+        -- TODO event-driven httpd?
         if self.on_message then
           self:on_message()
         end

@@ -40,6 +40,10 @@ while true do
       local s = assert(server:accept())
       assert(s:settimeout(0))
       local ws = websocket(websockets, s)
+
+      function ws:on_pong()
+        io.write(("[opcode=%x][%s]\n"):format(self.opcode, self.payload))
+      end
       function ws:on_message()
         io.write(("[opcode=%x][%s]\n"):format(self.opcode, self.payload))
       end
