@@ -7,6 +7,7 @@ addEventListener("DOMContentLoaded", () => {
   let recorder
   let session
   let session_counter
+  let socket
 
   let log = (...args) => {
     console.log(args)
@@ -200,6 +201,25 @@ addEventListener("DOMContentLoaded", () => {
 
       document.getElementById("stop").onclick = () => {
         stop().catch(e => log(e))
+      }
+
+      socket = new WebSocket("wss://nozomi.dromozoa.com/recorder-socket")
+      socket.binaryType = "blob"
+
+      socket.onopen = () => {
+        log("onopen")
+      }
+
+      socket.onclose = () => {
+        log("onclose")
+      }
+
+      socket.onerror = (ev) => {
+        log("onerror", ev.message)
+      }
+
+      socket.onmessage = (ev) => {
+        log("onmessage", ev.data)
       }
     })
   })().catch(e => log(e))
