@@ -82,7 +82,7 @@ addEventListener("DOMContentLoaded", () => {
     return true
   }
 
-  let stop = () => {
+  let stop = async () => {
     if (!recorder) {
       log("[error] recorder undefined")
       return false
@@ -91,6 +91,7 @@ addEventListener("DOMContentLoaded", () => {
     log("stop")
     recorder.stop()
     recorder = undefined
+    await update_stream()
 
     return true
   }
@@ -126,7 +127,7 @@ addEventListener("DOMContentLoaded", () => {
         let result = start()
         socket.send(JSON.stringify({ command: data.command, result: result }))
       } else if (data.command === "stop") {
-        let result = stop()
+        let result = await stop()
         socket.send(JSON.stringify({ command: data.command, result: result }))
       }
     } else {
@@ -239,6 +240,9 @@ addEventListener("DOMContentLoaded", () => {
     }
 
     document.getElementById("start").onclick = start
-    document.getElementById("stop").onclick = stop
+
+    document.getElementById("stop").onclick = () => {
+      stop().catch(e => log(e))
+    }
   })().catch(e => log(e))
 })
