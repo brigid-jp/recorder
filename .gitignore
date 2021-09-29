@@ -1,1 +1,3 @@
+*.o
 .*.swp
+/src/server
